@@ -8,6 +8,8 @@
     <string name="save_note">Save</string>
     <string name="cancel_edit">Cancel</string>
     <string name="delete_note">Delete</string>
+    <string name="delete_confirmation_title">Delete note?</string>
+    <string name="delete_confirmation_message">This note will be permanently removed.</string>
     <string name="notes_section_title">Your notes</string>
     <string name="notes_empty">Your notes will appear here.</string>
 </resources>
