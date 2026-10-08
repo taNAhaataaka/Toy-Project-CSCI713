@@ -8,8 +8,16 @@
     <string name="save_note">Save</string>
     <string name="cancel_edit">Cancel</string>
     <string name="delete_note">Delete</string>
-    <string name="delete_confirmation_title">Delete note?</string>
-    <string name="delete_confirmation_message">This note will be permanently removed.</string>
+    <string name="select_notes">Select</string>
+    <string name="delete_selected_notes">Delete selected (%1$d)</string>
     <string name="notes_section_title">Your notes</string>
     <string name="notes_empty">Your notes will appear here.</string>
+    <plurals name="delete_confirmation_title">
+        <item quantity="one">Delete note?</item>
+        <item quantity="other">Delete %1$d notes?</item>
+    </plurals>
+    <plurals name="delete_confirmation_message">
+        <item quantity="one">This note will be permanently removed.</item>
+        <item quantity="other">These %1$d notes will be permanently removed.</item>
+    </plurals>
 </resources>
