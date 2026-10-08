@@ -1,6 +1,12 @@
 <resources>
     <string name="app_name">Notes</string>
     <string name="notes_title">My Notes</string>
+    <string name="theme_options">Theme options</string>
+    <string name="theme_auto">Auto (device theme)</string>
+    <string name="theme_light">Light</string>
+    <string name="theme_dark">Dark</string>
+    <string name="high_contrast">High contrast</string>
+    <string name="ndsu_colors">NDSU colors</string>
     <string name="note_input_label">Write a note</string>
     <string name="add_note">Add note</string>
     <string name="edit_note">Edit</string>
