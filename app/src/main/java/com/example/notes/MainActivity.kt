@@ -12,12 +12,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -48,6 +50,7 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
     var notes by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var editingNoteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var editText by rememberSaveable { mutableStateOf("") }
+    var pendingDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     val trimmedNote = noteText.trim()
     val trimmedEdit = editText.trim()
 
@@ -60,6 +63,29 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
                 else -> editingIndex
             }
         }
+    }
+
+    if (pendingDeleteIndex != null) {
+        AlertDialog(
+            onDismissRequest = { pendingDeleteIndex = null },
+            title = { Text(stringResource(R.string.delete_confirmation_title)) },
+            text = { Text(stringResource(R.string.delete_confirmation_message)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        deleteNote(pendingDeleteIndex!!)
+                        pendingDeleteIndex = null
+                    }
+                ) {
+                    Text(stringResource(R.string.delete_note))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteIndex = null }) {
+                    Text(stringResource(R.string.cancel_edit))
+                }
+            }
+        )
     }
 
     Column(
@@ -140,7 +166,7 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
                                     ) {
                                         Text(stringResource(R.string.cancel_edit))
                                     }
-                                    Button(onClick = { deleteNote(index) }) {
+                                    Button(onClick = { pendingDeleteIndex = index }) {
                                         Text(stringResource(R.string.delete_note))
                                     }
                                 }
@@ -158,7 +184,7 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
                                     ) {
                                         Text(stringResource(R.string.edit_note))
                                     }
-                                    Button(onClick = { deleteNote(index) }) {
+                                    Button(onClick = { pendingDeleteIndex = index }) {
                                         Text(stringResource(R.string.delete_note))
                                     }
                                 }
