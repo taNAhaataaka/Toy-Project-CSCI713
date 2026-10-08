@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -26,6 +27,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.notes.ui.theme.NotesTheme
@@ -50,38 +52,64 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
     var notes by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var editingNoteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
     var editText by rememberSaveable { mutableStateOf("") }
-    var pendingDeleteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
+    var pendingDeleteIndices by rememberSaveable { mutableStateOf<List<Int>?>(null) }
+    var selectedNoteIndices by rememberSaveable { mutableStateOf(emptyList<Int>()) }
+    var isSelectionMode by rememberSaveable { mutableStateOf(false) }
     val trimmedNote = noteText.trim()
     val trimmedEdit = editText.trim()
 
-    fun deleteNote(index: Int) {
-        notes = notes.toMutableList().also { it.removeAt(index) }
+    fun deleteNotes(indices: List<Int>) {
+        val indicesToDelete = indices.toSet()
+        notes = notes.filterIndexed { index, _ -> index !in indicesToDelete }
         editingNoteIndex = editingNoteIndex?.let { editingIndex ->
-            when {
-                editingIndex == index -> null
-                editingIndex > index -> editingIndex - 1
-                else -> editingIndex
+            if (editingIndex in indicesToDelete) {
+                null
+            } else {
+                editingIndex - indicesToDelete.count { it < editingIndex }
             }
         }
+        selectedNoteIndices = selectedNoteIndices
+            .filter { it !in indicesToDelete }
+            .map { selectedIndex ->
+                selectedIndex - indicesToDelete.count { it < selectedIndex }
+            }
     }
 
-    if (pendingDeleteIndex != null) {
+    if (pendingDeleteIndices != null) {
         AlertDialog(
-            onDismissRequest = { pendingDeleteIndex = null },
-            title = { Text(stringResource(R.string.delete_confirmation_title)) },
-            text = { Text(stringResource(R.string.delete_confirmation_message)) },
+            onDismissRequest = { pendingDeleteIndices = null },
+            title = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.delete_confirmation_title,
+                        pendingDeleteIndices!!.size,
+                        pendingDeleteIndices!!.size
+                    )
+                )
+            },
+            text = {
+                Text(
+                    pluralStringResource(
+                        R.plurals.delete_confirmation_message,
+                        pendingDeleteIndices!!.size,
+                        pendingDeleteIndices!!.size
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        deleteNote(pendingDeleteIndex!!)
-                        pendingDeleteIndex = null
+                        deleteNotes(pendingDeleteIndices!!)
+                        pendingDeleteIndices = null
+                        selectedNoteIndices = emptyList()
+                        isSelectionMode = false
                     }
                 ) {
                     Text(stringResource(R.string.delete_note))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDeleteIndex = null }) {
+                TextButton(onClick = { pendingDeleteIndices = null }) {
                     Text(stringResource(R.string.cancel_edit))
                 }
             }
@@ -110,6 +138,7 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
             onClick = {
                 notes = listOf(trimmedNote) + notes
                 editingNoteIndex = editingNoteIndex?.plus(1)
+                selectedNoteIndices = selectedNoteIndices.map { it + 1 }
                 noteText = ""
             },
             enabled = trimmedNote.isNotEmpty(),
@@ -118,10 +147,44 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
             Text(stringResource(R.string.add_note))
         }
 
-        Text(
-            text = stringResource(R.string.notes_section_title),
-            style = MaterialTheme.typography.titleLarge
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(
+                text = stringResource(R.string.notes_section_title),
+                style = MaterialTheme.typography.titleLarge
+            )
+            if (notes.isNotEmpty()) {
+                if (isSelectionMode) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(
+                            onClick = {
+                                selectedNoteIndices = emptyList()
+                                isSelectionMode = false
+                            }
+                        ) {
+                            Text(stringResource(R.string.cancel_edit))
+                        }
+                        TextButton(
+                            onClick = { pendingDeleteIndices = selectedNoteIndices },
+                            enabled = selectedNoteIndices.isNotEmpty()
+                        ) {
+                            Text(
+                                stringResource(
+                                    R.string.delete_selected_notes,
+                                    selectedNoteIndices.size
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    TextButton(onClick = { isSelectionMode = true }) {
+                        Text(stringResource(R.string.select_notes))
+                    }
+                }
+            }
+        }
         if (notes.isEmpty()) {
             Text(
                 text = stringResource(R.string.notes_empty),
@@ -140,7 +203,28 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
                                 .padding(16.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            if (editingNoteIndex == index) {
+                            if (isSelectionMode) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Checkbox(
+                                        checked = index in selectedNoteIndices,
+                                        onCheckedChange = { isChecked ->
+                                            selectedNoteIndices = if (isChecked) {
+                                                selectedNoteIndices + index
+                                            } else {
+                                                selectedNoteIndices - index
+                                            }
+                                        }
+                                    )
+                                    Text(
+                                        text = note,
+                                        modifier = Modifier.weight(1f),
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
+                                }
+                            } else if (editingNoteIndex == index) {
                                 OutlinedTextField(
                                     value = editText,
                                     onValueChange = { editText = it },
@@ -166,7 +250,7 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
                                     ) {
                                         Text(stringResource(R.string.cancel_edit))
                                     }
-                                    Button(onClick = { pendingDeleteIndex = index }) {
+                                    Button(onClick = { pendingDeleteIndices = listOf(index) }) {
                                         Text(stringResource(R.string.delete_note))
                                     }
                                 }
@@ -184,7 +268,7 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
                                     ) {
                                         Text(stringResource(R.string.edit_note))
                                     }
-                                    Button(onClick = { pendingDeleteIndex = index }) {
+                                    Button(onClick = { pendingDeleteIndices = listOf(index) }) {
                                         Text(stringResource(R.string.delete_note))
                                     }
                                 }
