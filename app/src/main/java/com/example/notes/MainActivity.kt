@@ -4,7 +4,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,30 +18,92 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.example.notes.ui.theme.NotesTheme
 
+private enum class ThemeMode {
+    AUTO,
+    LIGHT,
+    DARK;
+
+    companion object {
+        fun fromPreference(value: String?): ThemeMode =
+            values().firstOrNull { it.name == value } ?: AUTO
+    }
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val themePreferences = getSharedPreferences("theme_preferences", MODE_PRIVATE)
         setContent {
-            NotesTheme {
+            val systemDarkTheme = isSystemInDarkTheme()
+            var themeMode by rememberSaveable {
+                mutableStateOf(
+                    ThemeMode.fromPreference(themePreferences.getString("theme_mode", null))
+                )
+            }
+            val darkTheme = when (themeMode) {
+                ThemeMode.AUTO -> systemDarkTheme
+                ThemeMode.LIGHT -> false
+                ThemeMode.DARK -> true
+            }
+            var highContrast by rememberSaveable {
+                mutableStateOf(themePreferences.getBoolean("high_contrast", false))
+            }
+            var ndsuColors by rememberSaveable {
+                mutableStateOf(themePreferences.getBoolean("ndsu_colors", false))
+            }
+            NotesTheme(
+                darkTheme = darkTheme,
+                highContrast = highContrast,
+                ndsuColors = ndsuColors
+            ) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    NotesScreen(modifier = Modifier.padding(innerPadding))
+                    NotesScreen(
+                        themeMode = themeMode,
+                        onThemeModeChange = {
+                            themeMode = it
+                            themePreferences.edit().putString("theme_mode", it.name).apply()
+                        },
+                        highContrast = highContrast,
+                        onHighContrastChange = {
+                            highContrast = it
+                            themePreferences.edit().putBoolean("high_contrast", it).apply()
+                            if (it && ndsuColors) {
+                                ndsuColors = false
+                                themePreferences.edit().putBoolean("ndsu_colors", false).apply()
+                                themeMode = ThemeMode.AUTO
+                                themePreferences.edit()
+                                    .putString("theme_mode", ThemeMode.AUTO.name)
+                                    .apply()
+                            }
+                        },
+                        ndsuColors = ndsuColors,
+                        onNdsuColorsChange = {
+                            ndsuColors = it
+                            themePreferences.edit().putBoolean("ndsu_colors", it).apply()
+                        },
+                        modifier = Modifier.padding(innerPadding)
+                    )
                 }
             }
         }
@@ -47,7 +111,15 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun NotesScreen(modifier: Modifier = Modifier) {
+private fun NotesScreen(
+    themeMode: ThemeMode,
+    onThemeModeChange: (ThemeMode) -> Unit,
+    highContrast: Boolean,
+    onHighContrastChange: (Boolean) -> Unit,
+    ndsuColors: Boolean,
+    onNdsuColorsChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
     var noteText by rememberSaveable { mutableStateOf("") }
     var notes by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var editingNoteIndex by rememberSaveable { mutableStateOf<Int?>(null) }
@@ -55,6 +127,7 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
     var pendingDeleteIndices by rememberSaveable { mutableStateOf<List<Int>?>(null) }
     var selectedNoteIndices by rememberSaveable { mutableStateOf(emptyList<Int>()) }
     var isSelectionMode by rememberSaveable { mutableStateOf(false) }
+    var themeMenuExpanded by rememberSaveable { mutableStateOf(false) }
     val trimmedNote = noteText.trim()
     val trimmedEdit = editText.trim()
 
@@ -122,10 +195,90 @@ private fun NotesScreen(modifier: Modifier = Modifier) {
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(
-            text = stringResource(R.string.notes_title),
-            style = MaterialTheme.typography.headlineMedium
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = stringResource(R.string.notes_title),
+                style = MaterialTheme.typography.headlineMedium
+            )
+            Box {
+                TextButton(onClick = { themeMenuExpanded = true }) {
+                    Text(stringResource(R.string.theme_options))
+                }
+                DropdownMenu(
+                    expanded = themeMenuExpanded,
+                    onDismissRequest = { themeMenuExpanded = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.theme_auto)) },
+                        onClick = {
+                            onThemeModeChange(ThemeMode.AUTO)
+                            onNdsuColorsChange(false)
+                            themeMenuExpanded = false
+                        },
+                        trailingIcon = {
+                            RadioButton(
+                                selected = !ndsuColors && themeMode == ThemeMode.AUTO,
+                                onClick = null
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.theme_light)) },
+                        onClick = {
+                            onThemeModeChange(ThemeMode.LIGHT)
+                            onNdsuColorsChange(false)
+                            themeMenuExpanded = false
+                        },
+                        trailingIcon = {
+                            RadioButton(
+                                selected = !ndsuColors && themeMode == ThemeMode.LIGHT,
+                                onClick = null
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.theme_dark)) },
+                        onClick = {
+                            onThemeModeChange(ThemeMode.DARK)
+                            onNdsuColorsChange(false)
+                            themeMenuExpanded = false
+                        },
+                        trailingIcon = {
+                            RadioButton(
+                                selected = !ndsuColors && themeMode == ThemeMode.DARK,
+                                onClick = null
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.ndsu_colors)) },
+                        enabled = !highContrast,
+                        onClick = {
+                            onNdsuColorsChange(true)
+                            themeMenuExpanded = false
+                        },
+                        trailingIcon = {
+                            RadioButton(
+                                selected = ndsuColors,
+                                onClick = null,
+                                enabled = !highContrast
+                            )
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.high_contrast)) },
+                        onClick = { onHighContrastChange(!highContrast) },
+                        trailingIcon = {
+                            Checkbox(checked = highContrast, onCheckedChange = null)
+                        }
+                    )
+                }
+            }
+        }
         OutlinedTextField(
             value = noteText,
             onValueChange = { noteText = it },
