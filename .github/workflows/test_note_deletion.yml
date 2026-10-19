@@ -27,4 +27,4 @@ jobs:
 
       # Runs a single command using the runners shell
       - name: Note Deletion
-        run: ./java/com/example/notes/NotesDeletionTest.kt
+        run: ./NotesDeletionTest.kt
