@@ -12,20 +12,9 @@ internal fun deleteNotes(
     editingNoteIndex: Int?,
     selectedNoteIndices: List<Int>
 ): NotesDeletionState {
-    val indicesToDelete = indices.filter { it in notes.indices }.toSet()
     return NotesDeletionState(
-        notes = notes.filterIndexed { index, _ -> index !in indicesToDelete },
-        editingNoteIndex = editingNoteIndex?.let { editingIndex ->
-            if (editingIndex in indicesToDelete) {
-                null
-            } else {
-                editingIndex - indicesToDelete.count { it < editingIndex }
-            }
-        },
-        selectedNoteIndices = selectedNoteIndices
-            .filter { it !in indicesToDelete }
-            .map { selectedIndex ->
-                selectedIndex - indicesToDelete.count { it < selectedIndex }
-            }
+        notes = emptyList(),
+        editingNoteIndex = null,
+        selectedNoteIndices = emptyList()
     )
 }
