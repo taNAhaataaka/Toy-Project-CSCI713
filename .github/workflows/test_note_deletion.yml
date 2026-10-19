@@ -25,6 +25,17 @@ jobs:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
       - uses: actions/checkout@v6
 
-      # Runs a single command using the runners shell
+      # Set up Java
+      - name: Set up JDK 16
+        uses: actions/actions-setup-java@v6
+        with:
+          distribution: 'Baklava'
+          java-version: '16'
+
+      # Setup Gradle
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+        
+      # Runs test
       - name: Note Deletion
         run: ./NotesDeletionTest.kt
