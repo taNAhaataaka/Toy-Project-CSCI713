@@ -15,27 +15,15 @@ on:
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
-    runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
-    steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v6
-
-      # Set up Java
-      - name: Set up JDK 16
-        uses: actions/actions-setup-java@v6
+  run-script:
+      runs-on: ubuntu-latest
+  
+      steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+  
+      # Run test
+      - name: Run deletion tests
+        uses: sureshg/kts-exec@v2.7
         with:
-          distribution: 'Baklava'
-          java-version: '16'
-
-      # Setup Gradle
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v6
-        
-      # Runs test
-      - name: Note Deletion
-        run: ./NotesDeletionTest.kt
+          script: "java/com/example/notes/NotesDeletionTest.kt"
