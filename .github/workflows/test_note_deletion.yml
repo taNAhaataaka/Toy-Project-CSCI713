@@ -16,7 +16,7 @@ jobs:
       - name: Set up JDK 16
         uses: actions/setup-java@v6
         with:
-          distribution: 'baklava'
+          distribution: 'temurin'
           java-version: '16'
 
       - name: Make gradlew executable
