@@ -131,23 +131,6 @@ private fun NotesScreen(
     val trimmedNote = noteText.trim()
     val trimmedEdit = editText.trim()
 
-    fun deleteNotes(indices: List<Int>) {
-        val indicesToDelete = indices.toSet()
-        notes = notes.filterIndexed { index, _ -> index !in indicesToDelete }
-        editingNoteIndex = editingNoteIndex?.let { editingIndex ->
-            if (editingIndex in indicesToDelete) {
-                null
-            } else {
-                editingIndex - indicesToDelete.count { it < editingIndex }
-            }
-        }
-        selectedNoteIndices = selectedNoteIndices
-            .filter { it !in indicesToDelete }
-            .map { selectedIndex ->
-                selectedIndex - indicesToDelete.count { it < selectedIndex }
-            }
-    }
-
     if (pendingDeleteIndices != null) {
         AlertDialog(
             onDismissRequest = { pendingDeleteIndices = null },
@@ -172,7 +155,15 @@ private fun NotesScreen(
             confirmButton = {
                 TextButton(
                     onClick = {
-                        deleteNotes(pendingDeleteIndices!!)
+                        val updatedState = deleteNotes(
+                            notes = notes,
+                            indices = pendingDeleteIndices!!,
+                            editingNoteIndex = editingNoteIndex,
+                            selectedNoteIndices = selectedNoteIndices
+                        )
+                        notes = updatedState.notes
+                        editingNoteIndex = updatedState.editingNoteIndex
+                        selectedNoteIndices = updatedState.selectedNoteIndices
                         pendingDeleteIndices = null
                         selectedNoteIndices = emptyList()
                         isSelectionMode = false
